@@ -1,6 +1,6 @@
-﻿namespace Snake__Game_Logic
+﻿namespace Snake_Game_CSharp
 {
-    internal abstract class Map
+    public abstract class Map
     {
         protected int width;
         protected int height;

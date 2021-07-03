@@ -1,133 +1,98 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Drawing;
 
-namespace Snake__Game_Logic
+namespace Snake_Game_CSharp
 {
-    internal enum Direction
+    public class Snake
     {
-        Top = 1,
-        Right,
-        Bot,
-        Left
-    };
+        private readonly int _startLength;
+        private readonly Point _startPosition;
+        private List<Point> _partsOfsnake;
+        public event EventHandler CrashAccident;
 
-    internal class Snake : Map
-    {
-        public List<Point> snake { get; private set; }
-        public static int Score { get; set; } = 0;
-        public Ball Ball { get; private set; }
-        public Direction Direction { get; set; }
-        public event EventHandler<string> CrashAccident;
-        public event EventHandler<int> ScoreChanged;
+        public List<Point> PartsOfSnake => _partsOfsnake;
 
-        public Snake(int width, int height, Direction direction)
+        public Snake(Point startPosition, int startLength)
         {
-            this.width = width;
-            this.height = height;
-            Direction = direction;
-            snake = new List<Point>();
-            Ball = new Ball(width, height);
-
-            StartNewGame();
+            _startPosition = startPosition;
+            _startLength = startLength;
+            _partsOfsnake = new List<Point>();
         }
 
-        public void StartNewGame()
+        public void GenerateSnake()
         {
-            Direction = Direction.Bot;
-
-            snake.Clear();
-            for (int i = 0, j = 2; i < 3; i++, j--)
-                snake.Add(new Point(width / 2, height / 2 + j));
-
-            // generate a ball 
-            GenerateNewBall();
-
-            Snake.Score = 0;
-
-            if(ScoreChanged != null)
-                ScoreChanged(null, Snake.Score);
+            _partsOfsnake.Clear();
+            int positionY = _startPosition.Y + _startLength - 1;
+            for (int i = 0; i < _startLength; i++)
+                _partsOfsnake.Add(new Point(_startPosition.X, positionY--));
         }
 
-        public void TurnTo(Direction direction)
+        public void MoveTo(Point movementVector, Size bounds)
         {
-            if (Direction == Direction.Bot && direction != Direction.Top)
-                Direction = direction;
-            else if (Direction == Direction.Top && direction != Direction.Bot)
-                Direction = direction;
-            else if (Direction == Direction.Right && direction != Direction.Left)
-                Direction = direction;
-            else if (Direction == Direction.Left && direction != Direction.Right)
-                Direction = direction;
-        }
+            var newPositionOfHead = GetHead().Add(movementVector);
+            newPositionOfHead = new Point((newPositionOfHead.X + bounds.Width) % bounds.Width,
+                                            (newPositionOfHead.Y + bounds.Height) % bounds.Height);
 
-        public void GoOneStepAhead()
-        {
-            Point offset = DirectionToPoint();
-            Point NewPosOfHead = snake[0] + offset;
-            NewPosOfHead = new Point((NewPosOfHead.X + width) % width,
-                                    (NewPosOfHead.Y + height) % height);
-            for (int i = snake.Count - 1; i > 2; --i)
+            // check collisions
+            for (int i = _partsOfsnake.Count - 1; i > 2; --i)
             {
-                if (NewPosOfHead == snake[i])
+                if (newPositionOfHead == _partsOfsnake[i])
                 {
-                    CrashAccident(null, Snake.Score.ToString());
+                    CrashAccident?.Invoke(this, null);
                     return;
                 }
             }
 
-            Point lPoint = snake.Last();
-            for (int i = snake.Count - 1; i > 0; --i)
+            // move ahead
+            for (int i = _partsOfsnake.Count - 1; i > 0; --i)
             {
-                snake[i] = snake[i - 1];
+                _partsOfsnake[i] = _partsOfsnake[i - 1];
             }
 
-            snake[0] = NewPosOfHead;
-
-            if (snake[0] == Ball.Position)
-            {
-                snake.Add(lPoint);
-                GenerateNewBall();
-                Snake.Score++;
-                ScoreChanged(null, Snake.Score);
-            }
+            SetHead(newPositionOfHead);
         }
 
-        private void GenerateNewBall()
+        public void AddPart(Point point)
         {
-            Ball.GetANextBall();
-            for (int i = 0; i < snake.Count; i++)
-                if (Ball.Position == snake[i])
-                {
-                    Ball.GetANextBall();
-                    i = 0;
-                }
+            _partsOfsnake.Add(point);
         }
 
-        private Point DirectionToPoint()
+        public Point GetHead()
         {
-            Point dir = null;
+            IsSnakeEmptyThrowException("GetHead() - Error: Snake is empty!");
 
-            switch (Direction)
-            {
-                case Direction.Top:
-                    dir = new Point(0, -1);
-                    break;
-                case Direction.Right:
-                    dir = new Point(1, 0);
-                    break;
-                case Direction.Bot:
-                    dir = new Point(0, 1);
-                    break;
-                case Direction.Left:
-                    dir = new Point(-1, 0);
-                    break;
-                default:
-                    dir = new Point();
-                    break;
-            }
+            return _partsOfsnake[0];
+        }
 
-            return dir;
+        public Point GetTail()
+        {
+            IsSnakeEmptyThrowException("GetTail() - Error: Snake is empty!");
+
+            return _partsOfsnake[_partsOfsnake.Count - 1];
+        }
+
+        public bool Contains(Point point)
+        {
+            bool result = false;
+
+            if (_partsOfsnake.Contains(point))
+                result = true;
+
+            return result;
+        }
+
+        private void SetHead(Point newPosition)
+        {
+            IsSnakeEmptyThrowException("SetHead() - Error: Snake is empty!");
+
+            _partsOfsnake[0] = newPosition;
+        }
+
+        private void IsSnakeEmptyThrowException(string message)
+        {
+            if (_partsOfsnake.Count < 0)
+                throw new IndexOutOfRangeException(message);
         }
     }
 }

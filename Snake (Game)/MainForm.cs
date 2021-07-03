@@ -1,40 +1,41 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
-using Snake__Game_Logic;
 
-namespace Snake__Game_
+namespace Snake_Game_CSharp
 {
     public partial class MainForm : Form
     {
-        Graphics graphics;
-        Snake snake;
-        int sizeX, sizeY;
-        string score = "SCORE: 0\t\tMAX SCORE: 0";
+        private Graphics _graphics;
+        private Game _game;
+        private int sizeX, sizeY;
+        private string ScoreMessage = "SCORE: 0\t\tMAX SCORE: 0";
 
-        Timer timer = new Timer();
-        Timer timerHead = new Timer();
+        private Timer timer = new Timer();
+        private Timer timerHead = new Timer();
 
-        Brush BallBrush = Brushes.Blue;
-        Brush SnakeBrush = Brushes.Red;
-        Color Background = Color.White;
-        Brush SnakeHeadBrush = Brushes.LightCoral;
+        private Brush BallBrush = Brushes.Blue;
+        private Brush SnakeBrush = Brushes.Red;
+        private Color Background = Color.White;
+        private Brush SnakeHeadBrush = Brushes.LightCoral;
 
-        short level = 5;
+        private int level = 5;
 
         public MainForm()
         {
             InitializeComponent();
 
-            sizeX = this.PaintingSurface.Width / 20;
-            sizeY = this.PaintingSurface.Height / 15;
+            Size snakePartSize = new Size(20, 15);
+
+            sizeX = this.PaintingSurface.Width / snakePartSize.Width;
+            sizeY = this.PaintingSurface.Height / snakePartSize.Height;
 
             PaintingSurface.Image = new Bitmap(PaintingSurface.Width, PaintingSurface.Height);
-            graphics = Graphics.FromImage(PaintingSurface.Image);
+            _graphics = Graphics.FromImage(PaintingSurface.Image);
 
-            snake = new Snake(20, 15, Direction.Bot);
-            snake.CrashAccident += Snake_CrashAccident;
-            snake.ScoreChanged += Snake_ScoreChanged;
+            _game = new Game(snakePartSize);
+            _game.CrashAccident += Snake_CrashAccident;
+            _game.ScoreChanged += Snake_ScoreChanged;
 
             Snake_ScoreChanged(null, 0);
 
@@ -62,20 +63,20 @@ namespace Snake__Game_
             }
             else { brush = SnakeBrush; blink = true; }
 
-            graphics.FillEllipse(brush, snake.snake[0].X * sizeX,
-                                                        snake.snake[0].Y * sizeY,
+            _graphics.FillEllipse(brush, _game.snake[0].X * sizeX,
+                                                        _game.snake[0].Y * sizeY,
                                                         sizeX, sizeY);
             PaintingSurface.Refresh();
         }
 
         private void Snake_ScoreChanged(object sender, int e)
         {
-            score = "SCORE: " + e.ToString() + "\t\tMAX SCORE: " + SaveManager.GetMaxScoreOutOfFile();
+            ScoreMessage = "SCORE: " + e.ToString() + "\t\tMAX SCORE: " + _game.Score.MaxValue;
         }
 
         private void Snake_CrashAccident(object sender, string e)
         {
-            SaveScore();
+            _game.Score.Save();
             timer.Stop();
             MessageBox.Show("Game over!");
         }
@@ -83,49 +84,25 @@ namespace Snake__Game_
         private void Timer_Tick(object sender, EventArgs e)
         {
             timer.Interval = 1000 / level - 100;
-            snake.TurnTo(newDirection);
-            snake.GoOneStepAhead();
+            _game.GoOneStepAhead();
             RePaint();
         }
 
-        private Direction newDirection = Direction.Bot;
         private void MainForm_KeyDown(object sender, KeyEventArgs e)
         {
-            switch(e.KeyCode)
-            {
-                case Keys.Right:
-                    newDirection = Direction.Right;
-                    break;
-                case Keys.Left:
-                    newDirection = Direction.Left;
-                    break;
-                case Keys.Up:
-                    newDirection = Direction.Top;
-                    break;
-                case Keys.Down:
-                    newDirection = Direction.Bot;
-                    break;
-            }
+            _game.MovementVector = e.KeyCode.ToVectorDirection();
         }
 
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            SaveScore();
+            _game.Score.Save();
             Application.Exit();
-        }
-
-        private void SaveScore()
-        {
-            int max = SaveManager.GetMaxScoreOutOfFile();
-            if (max < Snake.Score)
-                SaveManager.SaveNewMaxScore();
         }
 
         private void newGameToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            SaveScore();
-            newDirection = Direction.Bot;
-            snake.StartNewGame();
+            _game.Score.Save();
+            _game.StartNewGame();
             timer.Start();
         }
 
@@ -216,20 +193,20 @@ namespace Snake__Game_
         {
             if (timer.Enabled)
             {
-                graphics.Clear(Background);
+                _graphics.Clear(Background);
 
-                var listSnakeParts = snake.snake;
+                var listSnakeParts = _game.snake;
 
                 foreach (var snakePart in listSnakeParts)
-                    graphics.FillEllipse(SnakeBrush, snakePart.X * sizeX, 
+                    _graphics.FillEllipse(SnakeBrush, snakePart.X * sizeX, 
                                                         snakePart.Y * sizeY, 
                                                         sizeX, sizeY);
 
-                graphics.FillEllipse(BallBrush, snake.Ball.Position.X * sizeX, 
-                                                    snake.Ball.Position.Y * sizeY, 
+                _graphics.FillEllipse(BallBrush, _game.Ball.Position.X * sizeX, 
+                                                    _game.Ball.Position.Y * sizeY, 
                                                     sizeX, sizeY);
 
-                graphics.DrawString(score, new Font("Cambri", sizeY / 2), Brushes.Blue, 1, 1);
+                _graphics.DrawString(ScoreMessage, new Font("Cambri", sizeY / 2), Brushes.Blue, 1, 1);
 
                 PaintingSurface.Refresh();
             }

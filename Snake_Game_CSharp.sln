@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28307.539
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snake (Game)", "Snake (Game)\Snake (Game).csproj", "{0FEB50A2-E417-4870-8A64-8549F43BEF82}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snake-Game-CSharp", "Snake (Game)\Snake-Game-CSharp.csproj", "{0FEB50A2-E417-4870-8A64-8549F43BEF82}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

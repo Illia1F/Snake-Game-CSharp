@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Drawing;
 
-namespace Snake__Game_Logic
+namespace Snake_Game_CSharp
 {
-    internal class Ball : Map
+    public class Ball : Map
     {
         private static bool countBall = true;
 
