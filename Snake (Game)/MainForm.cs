@@ -6,85 +6,65 @@ namespace Snake_Game_CSharp
 {
     public partial class MainForm : Form
     {
-        private Graphics _graphics;
-        private Game _game;
-        private int sizeX, sizeY;
-        private string ScoreMessage = "SCORE: 0\t\tMAX SCORE: 0";
+        private readonly Size _gridSize = new Size(width: 20, height: 16);
+        private readonly Timer _refreshTimer = new Timer();
+        private readonly Graphics _graphics;
+        private readonly Game _game;
 
-        private Timer timer = new Timer();
-        private Timer timerHead = new Timer();
-
-        private Brush BallBrush = Brushes.Blue;
-        private Brush SnakeBrush = Brushes.Red;
-        private Color Background = Color.White;
-        private Brush SnakeHeadBrush = Brushes.LightCoral;
-
-        private int level = 5;
+        private readonly ToolStripMenuItem[] _levelOptions;
+        private int _level = 5;
 
         public MainForm()
         {
             InitializeComponent();
 
-            Size snakePartSize = new Size(20, 15);
-
-            sizeX = this.PaintingSurface.Width / snakePartSize.Width;
-            sizeY = this.PaintingSurface.Height / snakePartSize.Height;
+            _levelOptions = new[]
+            {
+                firstToolStripMenuItem,
+                twoToolStripMenuItem,
+                threeToolStripMenuItem,
+                fourToolStripMenuItem,
+                fiveToolStripMenuItem
+            };
 
             PaintingSurface.Image = new Bitmap(PaintingSurface.Width, PaintingSurface.Height);
             _graphics = Graphics.FromImage(PaintingSurface.Image);
 
-            _game = new Game(snakePartSize);
-            _game.CrashAccident += Snake_CrashAccident;
-            _game.ScoreChanged += Snake_ScoreChanged;
+            var cellSize = new Size(PaintingSurface.Width / _gridSize.Width,
+                                            PaintingSurface.Height / _gridSize.Height);
 
-            Snake_ScoreChanged(null, 0);
+            _game = new Game(_gridSize, cellSize);
+            _game.CrashAccident += SnakeCrashAccident;
+            _game.ScoreChanged += ScoreChanged;
+            ScoreChanged(this, 0);
 
-            timer.Interval = 100;
-            timer.Tick += Timer_Tick;
-            timer.Start();
-
-            timerHead.Interval = 50;
-            timer.Tick += Timer_Tick1;
-            timerHead.Start();
+            _refreshTimer.Interval = 100;
+            _refreshTimer.Tick += RefreshTimerTick;
+            _refreshTimer.Start();
 
             RePaint();
         }
 
-        bool blink = true;
-        private void Timer_Tick1(object sender, EventArgs e)
+        private void ScoreChanged(object sender, int score)
         {
-            timerHead.Interval = timer.Interval / 2;
-
-            Brush brush;
-            if (blink)
-            {
-                brush = SnakeHeadBrush;
-                blink = false;
-            }
-            else { brush = SnakeBrush; blink = true; }
-
-            _graphics.FillEllipse(brush, _game.snake[0].X * sizeX,
-                                                        _game.snake[0].Y * sizeY,
-                                                        sizeX, sizeY);
-            PaintingSurface.Refresh();
+            lbScoreValue.Text = score.ToString();
+            lbMaxScoreValue.Text = _game.Score.MaxValue.ToString();
         }
 
-        private void Snake_ScoreChanged(object sender, int e)
-        {
-            ScoreMessage = "SCORE: " + e.ToString() + "\t\tMAX SCORE: " + _game.Score.MaxValue;
-        }
-
-        private void Snake_CrashAccident(object sender, string e)
+        private void SnakeCrashAccident(object sender, EventArgs e)
         {
             _game.Score.Save();
-            timer.Stop();
-            MessageBox.Show("Game over!");
+            _refreshTimer.Stop();
+            MessageBox.Show(text: "Game over!",
+                            caption: "Snake",
+                            buttons: MessageBoxButtons.OK,
+                            icon: MessageBoxIcon.Information);
         }
 
-        private void Timer_Tick(object sender, EventArgs e)
+        private void RefreshTimerTick(object sender, EventArgs e)
         {
-            timer.Interval = 1000 / level - 100;
-            _game.GoOneStepAhead();
+            _refreshTimer.Interval = 1000 / (_level * 2);
+            _game.MoveForward();
             RePaint();
         }
 
@@ -93,29 +73,25 @@ namespace Snake_Game_CSharp
             _game.MovementVector = e.KeyCode.ToVectorDirection();
         }
 
-        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            _game.Score.Save();
-            Application.Exit();
-        }
-
         private void newGameToolStripMenuItem_Click(object sender, EventArgs e)
         {
             _game.Score.Save();
             _game.StartNewGame();
-            timer.Start();
+            _refreshTimer.Start();
+        }
+
+        private void RePaint()
+        {
+            _game.Repaint(_graphics);
+            PaintingSurface.Refresh();
+        }
+
+        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            _game.Score.Save();
         }
 
         #region Change colors
-        private void ballToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            BallBrush = new SolidBrush(ShowColors());
-        }
-
-        private void snakeToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            SnakeBrush = new SolidBrush(ShowColors());
-        }
 
         private Color ShowColors()
         {
@@ -126,90 +102,64 @@ namespace Snake_Game_CSharp
             return new Color();
         }
 
-        private void backgroundToolStripMenuItem_Click(object sender, EventArgs e)
+        private void ballToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Background = ShowColors();
+            _game.Ball.Color = new SolidBrush(ShowColors());
+        }
+
+        private void snakeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            _game.Snake.BodyColor = new SolidBrush(ShowColors());
         }
 
         private void headToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            SnakeHeadBrush = new SolidBrush(ShowColors());
+            _game.Snake.HeadColor = new SolidBrush(ShowColors());
         }
+
+        private void backgroundToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            _game.BackgroundColor = ShowColors();
+        }
+
         #endregion 
 
-        #region Ghange levels
+        #region Ghange level
+
+        private void ActivateLevelOption(int index)
+        {
+            for (int i = 0; i < _levelOptions.Length; i++)
+                _levelOptions[i].Checked = false;
+
+            _levelOptions[index].Checked = true;
+            _level = index + 1;
+        }
+
         private void firstToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            level = 1;
-            fiveToolStripMenuItem.Checked = false;
-            fourToolStripMenuItem.Checked = false;
-            threeToolStripMenuItem.Checked = false;
-            twoToolStripMenuItem.Checked = false;
-            firstToolStripMenuItem.Checked = true;
+            ActivateLevelOption(0);
         }
 
         private void twoToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            level = 2;
-            fiveToolStripMenuItem.Checked = false;
-            fourToolStripMenuItem.Checked = false;
-            threeToolStripMenuItem.Checked = false;
-            twoToolStripMenuItem.Checked = true;
-            firstToolStripMenuItem.Checked = false;
+            ActivateLevelOption(1);
         }
 
         private void threeToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            level = 3;
-            fiveToolStripMenuItem.Checked = false;
-            fourToolStripMenuItem.Checked = false;
-            threeToolStripMenuItem.Checked = true;
-            twoToolStripMenuItem.Checked = false;
-            firstToolStripMenuItem.Checked = false;
+            ActivateLevelOption(2);
         }
 
         private void fourToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            level = 4;
-            fiveToolStripMenuItem.Checked =false;
-            fourToolStripMenuItem.Checked = true;
-            threeToolStripMenuItem.Checked = false;
-            twoToolStripMenuItem.Checked = false;
-            firstToolStripMenuItem.Checked = false;
+            ActivateLevelOption(3);
         }
 
         private void fiveToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            level = 5;
-            fiveToolStripMenuItem.Checked = true;
-            fourToolStripMenuItem.Checked = false;
-            threeToolStripMenuItem.Checked = false;
-            twoToolStripMenuItem.Checked = false;
-            firstToolStripMenuItem.Checked = false;
+            ActivateLevelOption(4);
         }
+
         #endregion
-
-        private void RePaint()
-        {
-            if (timer.Enabled)
-            {
-                _graphics.Clear(Background);
-
-                var listSnakeParts = _game.snake;
-
-                foreach (var snakePart in listSnakeParts)
-                    _graphics.FillEllipse(SnakeBrush, snakePart.X * sizeX, 
-                                                        snakePart.Y * sizeY, 
-                                                        sizeX, sizeY);
-
-                _graphics.FillEllipse(BallBrush, _game.Ball.Position.X * sizeX, 
-                                                    _game.Ball.Position.Y * sizeY, 
-                                                    sizeX, sizeY);
-
-                _graphics.DrawString(ScoreMessage, new Font("Cambri", sizeY / 2), Brushes.Blue, 1, 1);
-
-                PaintingSurface.Refresh();
-            }
-        }
     }
 }

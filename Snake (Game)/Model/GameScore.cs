@@ -7,8 +7,20 @@ namespace Snake_Game_CSharp
     public class GameScore
     {
         private const string FileName = "info.dat";
+        private int _value;
 
-        public int Value { get; set; }
+        public int Value
+        {
+            get
+            {
+                return _value;
+            }
+            set
+            {
+                _value = value;
+                ScoreChanged?.Invoke(this, _value);
+            }
+        }
         public int MaxValue
         {
             get
@@ -26,6 +38,8 @@ namespace Snake_Game_CSharp
                 return actualMaxScore;
             }
         }
+
+        public event EventHandler<int> ScoreChanged;
 
         public void Save()
         {
